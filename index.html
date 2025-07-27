@@ -8,12 +8,10 @@
     </h2>
     {{ end }}
     {{ if .UserInfo }}
-    <h2>
-        Hello, {{ .UserInfo.Login }}!
-    </h2>
-    <h3>
-        ID: {{ .UserInfo.ID }}!
-    </h3>
-    {{ end }}
+  <h1>Hello, {{ .UserInfo.Name }} ({{ .UserInfo.Login }})</h1>
+  <img src="{{ .UserInfo.AvatarURL }}" alt="Avatar" width="100" />
+  <p>Email: {{ .UserInfo.Email }}</p>
+{{ end }}
+
 </body>
 </html>
