@@ -25,7 +25,8 @@ func main() {
 		},
 
 		RedirectURL: "http://localhost:3000/oauth2/callback",
-		Scopes:      []string{"user"},
+		// Scopes:      []string{"user"},
+		Scopes: []string{"read:user", "user:email"},
 	}
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{}))
