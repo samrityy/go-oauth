@@ -1,3 +1,4 @@
+// main.go
 package main
 
 import (
@@ -14,38 +15,46 @@ import (
 
 func main() {
 	godotenv.Load()
-	fmt.Println("client id " + os.Getenv("EXAMPLE_CLIENT_ID"))
-	oauthCfg := oauth2.Config{
-		ClientID:     os.Getenv("EXAMPLE_CLIENT_ID"),
-		ClientSecret: os.Getenv("EXAMPLE_CLIENT_SECRET"),
-		Endpoint: oauth2.Endpoint{
-			AuthURL:       "https://github.com/login/oauth/authorize",
-			DeviceAuthURL: "https://github.com/login/device/code",
-			TokenURL:      "https://github.com/login/oauth/access_token",
-		},
-
-		RedirectURL: "http://localhost:3000/oauth2/callback",
-		// Scopes:      []string{"user"},
-		Scopes: []string{"read:user", "user:email"},
-	}
-
+	fmt.Println("Environment variables loaded from .env file", os.Getenv("FACEBOOK_CLIENT_ID"))
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{}))
 	tmpl := template.Must(template.New("index.html").Funcs(
 		template.FuncMap{
-			"join": strings.Join,
+			"join":  strings.Join,
+			"title": strings.Title,
 		},
 	).ParseFiles("index.html"))
 
 	app := App{
-		OAuthConfig: &oauthCfg,
-		Logger:      logger,
-		Template:    tmpl,
+		Logger:   logger,
+		Template: tmpl,
+		OAuthConfigs: map[string]*oauth2.Config{
+			"github": {
+				ClientID:     os.Getenv("GITHUB_CLIENT_ID"),
+				ClientSecret: os.Getenv("GITHUB_CLIENT_SECRET"),
+				RedirectURL:  "http://localhost:3000/oauth2/callback/github",
+				Scopes:       []string{"read:user", "user:email"},
+				Endpoint: oauth2.Endpoint{
+					AuthURL:  "https://github.com/login/oauth/authorize",
+					TokenURL: "https://github.com/login/oauth/access_token",
+				},
+			},
+			"facebook": {
+				ClientID:     os.Getenv("FACEBOOK_CLIENT_ID"),
+				ClientSecret: os.Getenv("FACEBOOK_CLIENT_SECRET"),
+				RedirectURL:  "http://localhost:3000/oauth2/callback/facebook",
+				Scopes:       []string{"email", "public_profile"},
+				Endpoint: oauth2.Endpoint{
+					AuthURL:  "https://www.facebook.com/v10.0/dialog/oauth",
+					TokenURL: "https://graph.facebook.com/v10.0/oauth/access_token",
+				},
+			},
+		},
 	}
 
 	mux := http.NewServeMux()
-
-	mux.HandleFunc("GET /", LoggerMiddleware(logger, app.Root))
-	mux.HandleFunc("GET /oauth2/callback", LoggerMiddleware(logger, app.OAuthCallback))
+	mux.HandleFunc("/login/", LoggerMiddleware(logger, app.Login))
+	mux.HandleFunc("/", LoggerMiddleware(logger, app.Root))
+	mux.HandleFunc("/oauth2/callback/", LoggerMiddleware(logger, app.OAuthCallback))
 
 	server := http.Server{
 		Addr:    ":3000",
