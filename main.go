@@ -50,6 +50,16 @@ func main() {
 					TokenURL: "https://graph.facebook.com/v10.0/oauth/access_token",
 				},
 			},
+			"google": {
+				ClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
+				ClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
+				RedirectURL:  "http://localhost:3000/oauth2/callback/google",
+				Scopes:       []string{"openid", "email", "profile"},
+				Endpoint: oauth2.Endpoint{
+					AuthURL:  "https://accounts.google.com/o/oauth2/auth",
+					TokenURL: "https://oauth2.googleapis.com/token",
+				},
+			},
 		},
 	}
 
