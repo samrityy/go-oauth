@@ -15,7 +15,7 @@ import (
 
 // UserInfo represents information retrieved from user APIs.
 type UserInfo struct {
-	ID        int    `json:"id"`
+	ID        string `json:"id"`
 	Login     string `json:"login"`
 	Email     string `json:"email"`
 	Name      string `json:"name"`
@@ -31,6 +31,7 @@ type App struct {
 	AccessToken  string
 	RefreshToken string
 	UserInfo     *UserInfo
+	Provider     string
 }
 
 // Root renders the home page.
@@ -43,54 +44,56 @@ func (a *App) Root(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	req, err := http.NewRequest(http.MethodGet, "https://api.github.com/user", nil)
-	if err != nil {
-		a.Logger.Error("failed creating request", "error", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", a.AccessToken))
-	req.Header.Set("Accept", "application/vnd.github+json")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		a.Logger.Error("failed retrieving user details", "error", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	defer resp.Body.Close()
-
-	var userInfo UserInfo
-	if err := json.NewDecoder(resp.Body).Decode(&userInfo); err != nil {
-		a.Logger.Error("failed decoding user details", "error", err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	emailReq, _ := http.NewRequest(http.MethodGet, "https://api.github.com/user/emails", nil)
-	emailReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", a.AccessToken))
-	emailReq.Header.Set("Accept", "application/vnd.github+json")
-
-	emailResp, err := http.DefaultClient.Do(emailReq)
-	if err == nil {
-		defer emailResp.Body.Close()
-		var emails []struct {
-			Email    string `json:"email"`
-			Primary  bool   `json:"primary"`
-			Verified bool   `json:"verified"`
+	if a.Provider == "github" {
+		req, err := http.NewRequest(http.MethodGet, "https://api.github.com/user", nil)
+		if err != nil {
+			a.Logger.Error("failed creating request", "error", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
-		if err := json.NewDecoder(emailResp.Body).Decode(&emails); err == nil {
-			for _, e := range emails {
-				if e.Primary && e.Verified {
-					userInfo.Email = e.Email
-					break
+
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", a.AccessToken))
+		req.Header.Set("Accept", "application/vnd.github+json")
+
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			a.Logger.Error("failed retrieving user details", "error", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		defer resp.Body.Close()
+
+		var userInfo UserInfo
+		if err := json.NewDecoder(resp.Body).Decode(&userInfo); err != nil {
+			a.Logger.Error("failed decoding user details", "error", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		emailReq, _ := http.NewRequest(http.MethodGet, "https://api.github.com/user/emails", nil)
+		emailReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", a.AccessToken))
+		emailReq.Header.Set("Accept", "application/vnd.github+json")
+
+		emailResp, err := http.DefaultClient.Do(emailReq)
+		if err == nil {
+			defer emailResp.Body.Close()
+			var emails []struct {
+				Email    string `json:"email"`
+				Primary  bool   `json:"primary"`
+				Verified bool   `json:"verified"`
+			}
+			if err := json.NewDecoder(emailResp.Body).Decode(&emails); err == nil {
+				for _, e := range emails {
+					if e.Primary && e.Verified {
+						userInfo.Email = e.Email
+						break
+					}
 				}
 			}
 		}
-	}
 
-	a.UserInfo = &userInfo
+		a.UserInfo = &userInfo
+	}
 
 	w.WriteHeader(http.StatusOK)
 	if err := a.Template.Execute(w, a); err != nil {
@@ -142,6 +145,8 @@ func (a *App) OAuthCallback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	a.UserInfo = userInfo
+	a.Provider = provider
+
 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 }
 
@@ -215,11 +220,11 @@ func getFacebookUserInfo(accessToken string) (*UserInfo, error) {
 		return nil, err
 	}
 	defer resp.Body.Close()
-
+	var user UserInfo
 	var fbData struct {
-		ID    string `json:"id"`
-		Name  string `json:"name"`
-		Email string `json:"email"`
+		ID      string `json:"id"`
+		Name    string `json:"name"`
+		Email   string `json:"email"`
 		Picture struct {
 			Data struct {
 				URL string `json:"url"`
@@ -230,12 +235,11 @@ func getFacebookUserInfo(accessToken string) (*UserInfo, error) {
 	if err := json.NewDecoder(resp.Body).Decode(&fbData); err != nil {
 		return nil, err
 	}
-
-	return &UserInfo{
-		Login:     fbData.Name,
-		Email:     fbData.Email,
-		AvatarURL: fbData.Picture.Data.URL,
-	}, nil
+	user.ID = fbData.ID
+	user.Name = fbData.Name
+	user.Email = fbData.Email
+	user.AvatarURL = fbData.Picture.Data.URL
+	return &user, nil
 }
 
 func (a *App) Login(w http.ResponseWriter, r *http.Request) {
