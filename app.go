@@ -3,10 +3,10 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"html/template"
 	"log/slog"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -36,69 +36,15 @@ type App struct {
 
 // Root renders the home page.
 func (a *App) Root(w http.ResponseWriter, r *http.Request) {
-	if a.AccessToken == "" {
+	if a.AccessToken == "" || a.UserInfo == nil {
 		w.WriteHeader(http.StatusOK)
-		if err := a.Template.Execute(w, a); err != nil {
-			a.Logger.Error("failed executing template", "error", err)
-		}
+		_ = a.Template.Execute(w, a)
 		return
-	}
-
-	if a.Provider == "github" {
-		req, err := http.NewRequest(http.MethodGet, "https://api.github.com/user", nil)
-		if err != nil {
-			a.Logger.Error("failed creating request", "error", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", a.AccessToken))
-		req.Header.Set("Accept", "application/vnd.github+json")
-
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			a.Logger.Error("failed retrieving user details", "error", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		defer resp.Body.Close()
-
-		var userInfo UserInfo
-		if err := json.NewDecoder(resp.Body).Decode(&userInfo); err != nil {
-			a.Logger.Error("failed decoding user details", "error", err)
-			w.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-
-		emailReq, _ := http.NewRequest(http.MethodGet, "https://api.github.com/user/emails", nil)
-		emailReq.Header.Set("Authorization", fmt.Sprintf("Bearer %s", a.AccessToken))
-		emailReq.Header.Set("Accept", "application/vnd.github+json")
-
-		emailResp, err := http.DefaultClient.Do(emailReq)
-		if err == nil {
-			defer emailResp.Body.Close()
-			var emails []struct {
-				Email    string `json:"email"`
-				Primary  bool   `json:"primary"`
-				Verified bool   `json:"verified"`
-			}
-			if err := json.NewDecoder(emailResp.Body).Decode(&emails); err == nil {
-				for _, e := range emails {
-					if e.Primary && e.Verified {
-						userInfo.Email = e.Email
-						break
-					}
-				}
-			}
-		}
-
-		a.UserInfo = &userInfo
 	}
 
 	w.WriteHeader(http.StatusOK)
 	if err := a.Template.Execute(w, a); err != nil {
 		a.Logger.Error("failed executing template", "error", err)
-		return
 	}
 }
 
@@ -133,6 +79,8 @@ func (a *App) OAuthCallback(w http.ResponseWriter, r *http.Request) {
 		userInfo, err = getGitHubUserInfo(a.AccessToken)
 	case "facebook":
 		userInfo, err = getFacebookUserInfo(a.AccessToken)
+	case "google":
+		userInfo, err = getGoogleUserInfo(a.AccessToken)
 	default:
 		http.Error(w, "Unsupported provider", http.StatusBadRequest)
 		return
@@ -167,7 +115,7 @@ func getGitHubUserInfo(accessToken string) (*UserInfo, error) {
 	}
 	req.Header.Set("Authorization", "Bearer "+accessToken)
 	req.Header.Set("Accept", "application/vnd.github+json")
-	req.Header.Set("User-Agent", "YourAppName")
+	req.Header.Set("User-Agent", "Oauth")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -175,9 +123,21 @@ func getGitHubUserInfo(accessToken string) (*UserInfo, error) {
 	}
 	defer resp.Body.Close()
 
-	var user UserInfo
-	if err := json.NewDecoder(resp.Body).Decode(&user); err != nil {
+	var ghData struct {
+		ID        int64  `json:"id"`
+		Login     string `json:"login"`
+		Name      string `json:"name"`
+		AvatarURL string `json:"avatar_url"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&ghData); err != nil {
 		return nil, err
+	}
+
+	user := &UserInfo{
+		ID:        strconv.FormatInt(ghData.ID, 10),
+		Login:     ghData.Login,
+		Name:      ghData.Name,
+		AvatarURL: ghData.AvatarURL,
 	}
 
 	req2, err := http.NewRequest("GET", "https://api.github.com/user/emails", nil)
@@ -199,7 +159,6 @@ func getGitHubUserInfo(accessToken string) (*UserInfo, error) {
 		Primary  bool   `json:"primary"`
 		Verified bool   `json:"verified"`
 	}
-
 	if err := json.NewDecoder(resp2.Body).Decode(&emails); err != nil {
 		return nil, err
 	}
@@ -211,7 +170,7 @@ func getGitHubUserInfo(accessToken string) (*UserInfo, error) {
 		}
 	}
 
-	return &user, nil
+	return user, nil
 }
 
 func getFacebookUserInfo(accessToken string) (*UserInfo, error) {
@@ -220,9 +179,9 @@ func getFacebookUserInfo(accessToken string) (*UserInfo, error) {
 		return nil, err
 	}
 	defer resp.Body.Close()
-	var user UserInfo
+
 	var fbData struct {
-		ID      string `json:"id"`
+		ID      string  `json:"id"`
 		Name    string `json:"name"`
 		Email   string `json:"email"`
 		Picture struct {
@@ -235,12 +194,17 @@ func getFacebookUserInfo(accessToken string) (*UserInfo, error) {
 	if err := json.NewDecoder(resp.Body).Decode(&fbData); err != nil {
 		return nil, err
 	}
-	user.ID = fbData.ID
-	user.Name = fbData.Name
-	user.Email = fbData.Email
-	user.AvatarURL = fbData.Picture.Data.URL
-	return &user, nil
+
+	user := &UserInfo{
+		ID:        fbData.ID,
+		Name:      fbData.Name,
+		Email:     fbData.Email,
+		AvatarURL: fbData.Picture.Data.URL,
+	}
+
+	return user, nil
 }
+
 
 func (a *App) Login(w http.ResponseWriter, r *http.Request) {
 	provider := strings.TrimPrefix(r.URL.Path, "/login/")
