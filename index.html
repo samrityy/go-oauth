@@ -1,17 +1,30 @@
 <!DOCTYPE html>
 <html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>OAuth2 Example</title>
+</head>
+
 <body>
     <h1>OAuth2 Example</h1>
-    {{ if not .AccessToken }}
-    <h2>
-        <a href="https://github.com/login/oauth/authorize?scope={{ join .OAuthConfig.Scopes `,` }}&client_id={{ .OAuthConfig.ClientID }}">Sign in with GitHub</a>
-    </h2>
-    {{ end }}
-    {{ if .UserInfo }}
-  <h1>Hello, {{ .UserInfo.Name }} ({{ .UserInfo.Login }})</h1>
-  <img src="{{ .UserInfo.AvatarURL }}" alt="Avatar" width="100" />
-  <p>Email: {{ .UserInfo.Email }}</p>
-{{ end }}
 
+    {{ if not .AccessToken }}
+    <h2>Login with:</h2>
+    <ul>
+        {{ range $provider, $_ := .OAuthConfigs }}
+        <li>
+            <a href="/login/{{ $provider }}">Sign in with {{ title $provider }}</a>
+        </li>
+        {{ end }}
+    </ul>
+    {{ end }}
+
+    {{ if .UserInfo }}
+    <h2>Hello, {{ .UserInfo.Name }}</h2>
+    <img src="{{ .UserInfo.AvatarURL }}" alt="Avatar" width="100" />
+    <p>Email: {{ .UserInfo.Email }}</p>
+    {{ end }}
 </body>
+
 </html>
