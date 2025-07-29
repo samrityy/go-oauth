@@ -204,6 +204,39 @@ func getFacebookUserInfo(accessToken string) (*UserInfo, error) {
 
 	return user, nil
 }
+func getGoogleUserInfo(accessToken string) (*UserInfo, error) {
+	req, err := http.NewRequest("GET", "https://www.googleapis.com/oauth2/v2/userinfo", nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	var googleData struct {
+		ID        string `json:"id"`
+		Email     string `json:"email"`
+		Name      string `json:"name"`
+		Picture   string `json:"picture"`
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(&googleData); err != nil {
+		return nil, err
+	}
+
+	user := &UserInfo{
+		ID:        googleData.ID,
+		Name:      googleData.Name,
+		Email:     googleData.Email,
+		AvatarURL: googleData.Picture,
+	}
+
+	return user, nil
+}
 
 
 func (a *App) Login(w http.ResponseWriter, r *http.Request) {
