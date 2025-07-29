@@ -11,6 +11,8 @@ import (
 
 	"github.com/joho/godotenv"
 	"golang.org/x/oauth2"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 func main() {
@@ -20,7 +22,7 @@ func main() {
 	tmpl := template.Must(template.New("index.html").Funcs(
 		template.FuncMap{
 			"join":  strings.Join,
-			"title": strings.Title,
+			"title": cases.Title(language.English).String,
 		},
 	).ParseFiles("index.html"))
 
