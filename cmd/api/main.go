@@ -1,4 +1,3 @@
-// main.go
 package main
 
 import (
@@ -10,6 +9,8 @@ import (
 	"strings"
 
 	"github.com/joho/godotenv"
+	"github.com/samrityy/go-oauth/internal/app"
+	"github.com/samrityy/go-oauth/internal/middleware"
 	"github.com/samrityy/go-oauth/internal/db"
 	"golang.org/x/oauth2"
 	"golang.org/x/text/cases"
@@ -18,14 +19,16 @@ import (
 
 func main() {
 	godotenv.Load()
+
 	database, err := db.DB()
 	if err != nil {
 		fmt.Println("Failed to connect to database:", err)
 		os.Exit(1)
 	}
 	defer database.Close()
-	fmt.Println("Environment variables loaded from .env file", os.Getenv("FACEBOOK_CLIENT_ID"))
+
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{}))
+
 	tmpl := template.Must(template.New("index.html").Funcs(
 		template.FuncMap{
 			"join":  strings.Join,
@@ -33,7 +36,8 @@ func main() {
 		},
 	).ParseFiles("internal/templates/index.html"))
 
-	app := App{
+	// ✅ Create the app instance from package `app`
+	appInstance := &app.App{
 		Logger:   logger,
 		Template: tmpl,
 		DB:       database,
@@ -70,7 +74,7 @@ func main() {
 			},
 			"instagram": {
 				ClientID:     os.Getenv("INSTAGRAM_CLIENT_ID"),
-				ClientSecret: os.Getenv("instagram_CLIENT_SECRET"),
+				ClientSecret: os.Getenv("INSTAGRAM_CLIENT_SECRET"),
 				RedirectURL:  "http://localhost:3000/oauth2/callback/instagram",
 				Scopes:       []string{"user_profile", "user_media"},
 				Endpoint: oauth2.Endpoint{
@@ -82,9 +86,10 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/login/", LoggerMiddleware(logger, app.Login))
-	mux.HandleFunc("/", LoggerMiddleware(logger, app.Root))
-	mux.HandleFunc("/oauth2/callback/", LoggerMiddleware(logger, app.OAuthCallback))
+
+	mux.HandleFunc("/login/", middleware.LoggerMiddleware(logger, appInstance.Login))
+	mux.HandleFunc("/", middleware.LoggerMiddleware(logger, appInstance.Root))
+	mux.HandleFunc("/oauth2/callback/", middleware.LoggerMiddleware(logger, appInstance.OAuthCallback))
 
 	server := http.Server{
 		Addr:    ":3000",
