@@ -1,5 +1,5 @@
 // app.go
-package main
+package app
 
 import (
 	"database/sql"
@@ -10,18 +10,11 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 	"golang.org/x/oauth2"
+	"github.com/samrityy/go-oauth/internal/models"
 )
 
 // UserInfo represents information retrieved from user APIs.
-type UserInfo struct {
-	ID        string `json:"id"`
-	Login     string `json:"login"`
-	Email     string `json:"email"`
-	Name      string `json:"name"`
-	AvatarURL string `json:"avatar_url"`
-}
 
 // App holds configuration and in-memory session data.
 type App struct {
@@ -31,7 +24,7 @@ type App struct {
 
 	AccessToken  string
 	RefreshToken string
-	UserInfo     *UserInfo
+	UserInfo    *models.User
 	Provider     string
 	DB           *sql.DB
 }
@@ -75,7 +68,7 @@ func (a *App) OAuthCallback(w http.ResponseWriter, r *http.Request) {
 	a.AccessToken = token.AccessToken
 	a.RefreshToken = token.RefreshToken
 
-	var userInfo *UserInfo
+	var userInfo *models.User
 	switch provider {
 	case "github":
 		userInfo, err = getGitHubUserInfo(a.AccessToken)
@@ -103,17 +96,9 @@ func (a *App) OAuthCallback(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 }
 
-// LoggerMiddleware logs the start and end of requests.
-func LoggerMiddleware(logger *slog.Logger, handler http.HandlerFunc) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		receivedTime := time.Now()
-		logger.Info("request received", "method", r.Method, "path", r.URL.Path)
-		handler(w, r)
-		logger.Info("request complete", "method", r.Method, "path", r.URL.Path, "duration_ms", time.Since(receivedTime).Milliseconds())
-	}
-}
 
-func getGitHubUserInfo(accessToken string) (*UserInfo, error) {
+
+func getGitHubUserInfo(accessToken string) (*models.User, error) {
 	req, err := http.NewRequest("GET", "https://api.github.com/user", nil)
 	if err != nil {
 		return nil, err
@@ -138,9 +123,8 @@ func getGitHubUserInfo(accessToken string) (*UserInfo, error) {
 		return nil, err
 	}
 
-	user := &UserInfo{
+	user := &models.User{
 		ID:        strconv.FormatInt(ghData.ID, 10),
-		Login:     ghData.Login,
 		Name:      ghData.Name,
 		AvatarURL: ghData.AvatarURL,
 	}
@@ -178,7 +162,7 @@ func getGitHubUserInfo(accessToken string) (*UserInfo, error) {
 	return user, nil
 }
 
-func getFacebookUserInfo(accessToken string) (*UserInfo, error) {
+func getFacebookUserInfo(accessToken string) (*models.User, error) {
 	resp, err := http.Get("https://graph.facebook.com/me?fields=id,name,email,picture&access_token=" + accessToken)
 	if err != nil {
 		return nil, err
@@ -200,7 +184,7 @@ func getFacebookUserInfo(accessToken string) (*UserInfo, error) {
 		return nil, err
 	}
 
-	user := &UserInfo{
+	user := &models.User{
 		ID:        fbData.ID,
 		Name:      fbData.Name,
 		Email:     fbData.Email,
@@ -209,7 +193,7 @@ func getFacebookUserInfo(accessToken string) (*UserInfo, error) {
 
 	return user, nil
 }
-func getGoogleUserInfo(accessToken string) (*UserInfo, error) {
+func getGoogleUserInfo(accessToken string) (*models.User, error) {
 	req, err := http.NewRequest("GET", "https://www.googleapis.com/oauth2/v2/userinfo", nil)
 	if err != nil {
 		return nil, err
@@ -233,7 +217,7 @@ func getGoogleUserInfo(accessToken string) (*UserInfo, error) {
 		return nil, err
 	}
 
-	user := &UserInfo{
+	user := &models.User{
 		ID:        googleData.ID,
 		Name:      googleData.Name,
 		Email:     googleData.Email,
@@ -243,7 +227,7 @@ func getGoogleUserInfo(accessToken string) (*UserInfo, error) {
 	return user, nil
 }
 
-func getInstagramUserInfo(accessToken string) (*UserInfo, error) {
+func getInstagramUserInfo(accessToken string) (*models.User, error) {
 	resp, err := http.Get("https://graph.instagram.com/me?fields=id,username,account_type&access_token=" + accessToken)
 	if err != nil {
 		return nil, err
@@ -258,9 +242,8 @@ func getInstagramUserInfo(accessToken string) (*UserInfo, error) {
 	if err := json.NewDecoder(resp.Body).Decode(&igData); err != nil {
 		return nil, err
 	}
-	user := &UserInfo{
+	user := &models.User{
 		ID:    igData.ID,
-		Login: igData.Username,
 		Name:  igData.Username,
 	}
 	return user, nil
