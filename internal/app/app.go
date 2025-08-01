@@ -10,8 +10,9 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"golang.org/x/oauth2"
+
 	"github.com/samrityy/go-oauth/internal/models"
+	"golang.org/x/oauth2"
 )
 
 // UserInfo represents information retrieved from user APIs.
@@ -24,7 +25,7 @@ type App struct {
 
 	AccessToken  string
 	RefreshToken string
-	UserInfo    *models.User
+	UserInfo     *models.User
 	Provider     string
 	DB           *sql.DB
 }
@@ -41,6 +42,21 @@ func (a *App) Root(w http.ResponseWriter, r *http.Request) {
 	if err := a.Template.Execute(w, a); err != nil {
 		a.Logger.Error("failed executing template", "error", err)
 	}
+}
+
+func (a *App) SetupRoutes() http.Handler {
+	mux := http.NewServeMux()
+
+	// OAuth & home routes
+	mux.HandleFunc("/", a.Root)
+	mux.HandleFunc("/login/", a.Login)
+	mux.HandleFunc("/oauth2/callback/", a.OAuthCallback)
+
+	// User routes
+	mux.HandleFunc("/users", a.HandleUsers)
+	mux.HandleFunc("/users/", a.HandleUserByID)
+
+	return mux
 }
 
 // OAuthCallback handles OAuth2 callback for any provider.
@@ -95,8 +111,6 @@ func (a *App) OAuthCallback(w http.ResponseWriter, r *http.Request) {
 
 	http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 }
-
-
 
 func getGitHubUserInfo(accessToken string) (*models.User, error) {
 	req, err := http.NewRequest("GET", "https://api.github.com/user", nil)
@@ -243,8 +257,8 @@ func getInstagramUserInfo(accessToken string) (*models.User, error) {
 		return nil, err
 	}
 	user := &models.User{
-		ID:    igData.ID,
-		Name:  igData.Username,
+		ID:   igData.ID,
+		Name: igData.Username,
 	}
 	return user, nil
 
