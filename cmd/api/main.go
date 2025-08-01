@@ -2,15 +2,13 @@ package main
 
 import (
 	"fmt"
-	"html/template"
 	"log/slog"
 	"net/http"
 	"os"
 	"strings"
-
+	"html/template"
 	"github.com/joho/godotenv"
 	"github.com/samrityy/go-oauth/internal/app"
-	"github.com/samrityy/go-oauth/internal/middleware"
 	"github.com/samrityy/go-oauth/internal/db"
 	"golang.org/x/oauth2"
 	"golang.org/x/text/cases"
@@ -36,7 +34,6 @@ func main() {
 		},
 	).ParseFiles("internal/templates/index.html"))
 
-	// ✅ Create the app instance from package `app`
 	appInstance := &app.App{
 		Logger:   logger,
 		Template: tmpl,
@@ -60,8 +57,8 @@ func main() {
 				Endpoint: oauth2.Endpoint{
 					AuthURL:  "https://www.facebook.com/v10.0/dialog/oauth",
 					TokenURL: "https://graph.facebook.com/v10.0/oauth/access_token",
-				},
-			},
+		},
+	},
 			"google": {
 				ClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
 				ClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
@@ -85,21 +82,18 @@ func main() {
 		},
 	}
 
-	mux := http.NewServeMux()
+	handler := appInstance.SetupRoutes()
 
-	mux.HandleFunc("/login/", middleware.LoggerMiddleware(logger, appInstance.Login))
-	mux.HandleFunc("/", middleware.LoggerMiddleware(logger, appInstance.Root))
-	mux.HandleFunc("/oauth2/callback/", middleware.LoggerMiddleware(logger, appInstance.OAuthCallback))
 
 	server := http.Server{
 		Addr:    ":3000",
-		Handler: mux,
+		Handler: handler,
 	}
 
-	logger.Info("start http", "address", server.Addr)
+	logger.Info("starting server", "addr", server.Addr)
 
 	if err := server.ListenAndServe(); err != nil {
-		logger.Error("failed serving http", "error", err)
+		logger.Error("server error", "err", err)
 		os.Exit(1)
 	}
 }
