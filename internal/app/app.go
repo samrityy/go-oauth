@@ -51,6 +51,7 @@ func (a *App) SetupRoutes() http.Handler {
 	// OAuth & home routes
 	mux.HandleFunc("/", a.Root)
 	mux.HandleFunc("/login/", a.Login)
+	mux.HandleFunc("/logout/", a.Logout)
 	mux.HandleFunc("/oauth2/callback/", a.OAuthCallback)
 
 	// User routes
@@ -275,4 +276,13 @@ func (a *App) Login(w http.ResponseWriter, r *http.Request) {
 
 	url := oauthCfg.AuthCodeURL("state-" + provider)
 	http.Redirect(w, r, url, http.StatusTemporaryRedirect)
+}
+
+func (a *App) Logout(w http.ResponseWriter, r *http.Request) {
+	a.AccessToken = ""
+	a.RefreshToken = ""
+	a.UserInfo = nil
+	a.Provider = ""
+
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
