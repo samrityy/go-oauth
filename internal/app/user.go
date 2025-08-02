@@ -43,7 +43,7 @@ func (a *App) HandleUsers(w http.ResponseWriter, r *http.Request) {
 		}
 
 		err = a.DB.QueryRow(
-			"INSERT INTO users (name, email) VALUES ($1, $2) RETURNING id",
+			"INSERT INTO users (name, email, avatarURL) VALUES ($1, $2, $3) RETURNING id",
 			u.Name, u.Email,
 		).Scan(&u.ID)
 
