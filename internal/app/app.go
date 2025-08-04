@@ -4,7 +4,6 @@ package app
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"html/template"
 	"log/slog"
 	"net/http"
@@ -129,7 +128,7 @@ func (a *App) OAuthCallback(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "DB error", http.StatusInternalServerError)
 		return
 	}
-
+	SetAuthCookies(a.AccessToken, strconv.Itoa(userID), w)
 	a.UserInfo = userInfo
 	a.Provider = provider
 
