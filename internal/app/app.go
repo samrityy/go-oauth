@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/samrityy/go-oauth/internal/db"
 	"github.com/samrityy/go-oauth/internal/models"
 	"golang.org/x/oauth2"
 )
@@ -105,6 +106,26 @@ func (a *App) OAuthCallback(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		a.Logger.Error("failed retrieving user info", "error", err)
 		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	userID, err := db.SaveOrUpdateUser(a.DB, userInfo)
+	if err != nil {
+		a.Logger.Error("failed to save user", "error", err)
+		http.Error(w, "DB error", http.StatusInternalServerError)
+		return
+	}
+
+	// Save OAuth tokens
+	err = db.SaveUserOAuth(a.DB, &models.UserOAuth{
+		UserID:       userID,
+		Provider:     provider,
+		ProviderID:   userInfo.ID,
+		AccessToken:  a.AccessToken,
+		RefreshToken: a.RefreshToken,
+	})
+	if err != nil {
+		a.Logger.Error("failed to save oauth info", "error", err)
+		http.Error(w, "DB error", http.StatusInternalServerError)
 		return
 	}
 
