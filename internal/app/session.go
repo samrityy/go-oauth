@@ -22,10 +22,36 @@ func SetAuthCookies(token string, userID string, w http.ResponseWriter) {
 	})
 }
 
-func GetSessionToken(r *http.Request) (string, error) {
-	cookie, err := r.Cookie("session_token")
+func GetAuthCookies(r *http.Request) (string, string, error) {
+	accessTokenCookie, err := r.Cookie("access_token")
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
-	return cookie.Value, nil
+
+	userIDCookie, err := r.Cookie("user_id")
+	if err != nil {
+		return "", "", err
+	}
+
+	return accessTokenCookie.Value, userIDCookie.Value, nil
+}
+
+
+func ClearAuthCookies(w http.ResponseWriter) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     "access_token",
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		Expires:  time.Unix(0, 0),
+		HttpOnly: true,
+	})
+
+	http.SetCookie(w, &http.Cookie{
+		Name:    "user_id",
+		Value:   "",
+		Path:    "/",
+		MaxAge:  -1,
+		Expires: time.Unix(0, 0),
+	})
 }
