@@ -5,6 +5,8 @@ CREATE TABLE user_oauth (
     provider_id TEXT NOT NULL,              
     access_token TEXT,
     refresh_token TEXT,
-    token_expiry TIMESTAMPTZ
-       
+    token_expiry TIMESTAMPTZ,
+
+    UNIQUE (provider, provider_id),         
+    UNIQUE (user_id, provider)            
 );
