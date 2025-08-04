@@ -301,6 +301,6 @@ func (a *App) Logout(w http.ResponseWriter, r *http.Request) {
 	a.RefreshToken = ""
 	a.UserInfo = nil
 	a.Provider = ""
-
+	ClearAuthCookies(w)
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
