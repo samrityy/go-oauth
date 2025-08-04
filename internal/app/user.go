@@ -3,6 +3,7 @@ package app
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -48,7 +49,8 @@ func (a *App) HandleUsers(w http.ResponseWriter, r *http.Request) {
 		).Scan(&u.ID)
 
 		if err != nil {
-			http.Error(w, "Failed to create user", http.StatusInternalServerError)
+			fmt.Println("Error inserting user:", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
