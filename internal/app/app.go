@@ -4,6 +4,7 @@ package app
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"html/template"
 	"log/slog"
 	"net/http"
@@ -149,7 +150,6 @@ func getGitHubUserInfo(accessToken string) (*models.User, error) {
 		return nil, err
 	}
 	defer resp.Body.Close()
-
 	var ghData struct {
 		ID        int64  `json:"id"`
 		Login     string `json:"login"`
@@ -159,13 +159,11 @@ func getGitHubUserInfo(accessToken string) (*models.User, error) {
 	if err := json.NewDecoder(resp.Body).Decode(&ghData); err != nil {
 		return nil, err
 	}
-
 	user := &models.User{
 		ID:        strconv.FormatInt(ghData.ID, 10),
-		Name:      ghData.Name,
+		Name:      ghData.Login,
 		AvatarURL: ghData.AvatarURL,
 	}
-
 	req2, err := http.NewRequest("GET", "https://api.github.com/user/emails", nil)
 	if err != nil {
 		return nil, err
