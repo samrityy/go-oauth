@@ -117,7 +117,7 @@ func (a *App) OAuthCallback(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Save OAuth tokens
-	err = db.SaveUserOAuth(a.DB, &models.UserOAuth{
+	err = db.SaveOrUpdateUserOAuth(a.DB, &models.UserOAuth{
 		UserID:       userID,
 		Provider:     provider,
 		ProviderID:   userInfo.ID,
