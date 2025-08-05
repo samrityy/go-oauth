@@ -33,15 +33,17 @@ type App struct {
 
 // Root renders the home page.
 func (a *App) Root(w http.ResponseWriter, r *http.Request) {
-	if a.AccessToken == "" || a.UserInfo == nil {
-		w.WriteHeader(http.StatusOK)
-		_ = a.Template.Execute(w, a)
+	// If not logged in, send to signin
+	_, _, err := GetAuthCookies(r)
+	if a.AccessToken == "" || a.UserInfo == nil || err == nil {
+		http.Redirect(w, r, "/signin", http.StatusSeeOther)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	if err := a.Template.Execute(w, a); err != nil {
-		a.Logger.Error("failed executing template", "error", err)
+	// Else show dashboard/home
+	if err := a.Template.ExecuteTemplate(w, "index.html", a); err != nil {
+		a.Logger.Error("failed executing index template", "error", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 	}
 }
 
@@ -51,6 +53,17 @@ func (a *App) SetupRoutes() http.Handler {
 
 	// OAuth & home routes
 	mux.HandleFunc("/", a.Root)
+	mux.HandleFunc("/signin", func(w http.ResponseWriter, r *http.Request) {
+		if a.AccessToken != "" && a.UserInfo != nil {
+			http.Redirect(w, r, "/", http.StatusSeeOther)
+			return
+		}
+
+		if err := a.Template.ExecuteTemplate(w, "signin.html", a); err != nil {
+			a.Logger.Error("failed rendering signin", "error", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		}
+	})
 	mux.HandleFunc("/login/", a.Login)
 	mux.HandleFunc("/logout/", a.Logout)
 	mux.HandleFunc("/oauth2/callback/", a.OAuthCallback)
