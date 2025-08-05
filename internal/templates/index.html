@@ -25,76 +25,11 @@
       width: 350px;
       text-align: center;
     }
-
-    .logo {
-      width: 9rem;
-      height: 8rem;
-      margin: 0 auto ;
-      display: block;
-    }
-
     h1 {
       margin-bottom: 1.5rem;
       font-weight: 700;
     }
 
-    ul.oauth-list {
-      list-style: none;
-      padding: 0;
-      margin: 1rem 0 2rem;
-    }
-
-    ul.oauth-list li {
-      margin: 0.6rem 0;
-    }
-
-    ul.oauth-list li a {
-      display: block;
-      padding: 0.5rem 0;
-      background: #606c38;
-      color: white;
-      text-decoration: none;
-      border-radius: 4px;
-      font-weight: 400;
-      transition: background 0.3s;
-      font-size: 15px;
-    }
-
-    ul.oauth-list li a:hover {
-      background: #a7c957;
-    }
-
-    form.login-form {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-      margin-bottom: 2rem;
-    }
-
-    form.login-form input[type="text"],
-    form.login-form input[type="password"] {
-      padding: 0.6rem 0.8rem;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      font-size: 1rem;
-    }
-
-    form.login-form button {
-      padding: 0.7rem;
-      background: #606c38;
-      color: white;
-      font-weight: 600;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: background 0.3s, color 0.3s;
-
-    }
-
-    form.login-form button:hover {
-      background: #A39594;
-      color: #EDEBD7;
-    }
 
     .user-info img {
       border-radius: 50%;
@@ -110,26 +45,6 @@
 
 <body>
   <div class="container">
-    <img src="/static/logo.png" alt="Logo" class="logo" />
-
-    {{ if not .AccessToken }}
-    <!-- Optional: Traditional Login Form -->
-    <form class="login-form" method="POST" action="/login">
-      <input type="text" name="username" placeholder="Username or Email" required />
-      <input type="password" name="password" placeholder="Password" required />
-      <button type="submit">Login</button>
-    </form>
-
-    <p>Sign In With</p>
-    <ul class="oauth-list">
-      {{ range $provider, $_ := .OAuthConfigs }}
-      <li>
-        <a href="/login/{{ $provider }}"> {{ title $provider }}</a>
-      </li>
-      {{ end }}
-    </ul>
-    {{ end }}
-
     {{ if .UserInfo }}
     <div class="user-info">
       <h2>Hello, {{ .UserInfo.Name }}</h2>
