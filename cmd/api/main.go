@@ -27,12 +27,13 @@ func main() {
 
 	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{}))
 
-	tmpl := template.Must(template.New("index.html").Funcs(
+	tmpl := template.Must(template.New("").Funcs(
 		template.FuncMap{
 			"join":  strings.Join,
 			"title": cases.Title(language.English).String,
 		},
-	).ParseFiles("internal/templates/index.html"))
+	).ParseFiles("internal/templates/signin.html", "internal/templates/index.html"))
+	
 
 	appInstance := &app.App{
 		Logger:   logger,
