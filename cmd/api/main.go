@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
+	"html/template"
 	"log/slog"
 	"net/http"
 	"os"
 	"strings"
-	"html/template"
+
 	"github.com/joho/godotenv"
 	"github.com/samrityy/go-oauth/internal/app"
 	"github.com/samrityy/go-oauth/internal/db"
@@ -33,7 +34,6 @@ func main() {
 			"title": cases.Title(language.English).String,
 		},
 	).ParseFiles("internal/templates/signin.html", "internal/templates/index.html"))
-	
 
 	appInstance := &app.App{
 		Logger:   logger,
@@ -58,8 +58,8 @@ func main() {
 				Endpoint: oauth2.Endpoint{
 					AuthURL:  "https://www.facebook.com/v10.0/dialog/oauth",
 					TokenURL: "https://graph.facebook.com/v10.0/oauth/access_token",
-		},
-	},
+				},
+			},
 			"google": {
 				ClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
 				ClientSecret: os.Getenv("GOOGLE_CLIENT_SECRET"),
@@ -85,10 +85,14 @@ func main() {
 
 	handler := appInstance.SetupRoutes()
 
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "3000" // fallback for local development
+	}
 
 	server := http.Server{
-		Addr:    ":3000",
-		Handler: handler,
+		Addr:    ":" + port,
+		Handler:handler, // replace with your actual handler
 	}
 
 	logger.Info("starting server", "addr", server.Addr)
