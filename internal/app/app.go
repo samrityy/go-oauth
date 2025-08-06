@@ -4,6 +4,7 @@ package app
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"html/template"
 	"log/slog"
 	"net/http"
@@ -34,8 +35,9 @@ type App struct {
 // Root renders the home page.
 func (a *App) Root(w http.ResponseWriter, r *http.Request) {
 	// If not logged in, send to signin
-	_, _, err := GetAuthCookies(r)
-	if a.AccessToken == "" || a.UserInfo == nil || err == nil {
+	// _, err := r.Cookie("access_token")
+	token, _, _ := GetAuthCookies(r)
+	if a.AccessToken == "" || a.UserInfo == nil || token == "" {
 		http.Redirect(w, r, "/signin", http.StatusSeeOther)
 		return
 	}
@@ -71,7 +73,7 @@ func (a *App) SetupRoutes() http.Handler {
 	// User routes
 	mux.HandleFunc("/users", a.HandleUsers)
 	mux.HandleFunc("/users/", a.HandleUserByID)
-
+	// mux.HandleFunc("/facebook-feed/", GetFacebookFeed)
 	return mux
 }
 
