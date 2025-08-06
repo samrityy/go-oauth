@@ -43,7 +43,7 @@ func main() {
 			"github": {
 				ClientID:     os.Getenv("GITHUB_CLIENT_ID"),
 				ClientSecret: os.Getenv("GITHUB_CLIENT_SECRET"),
-				RedirectURL:  "http://localhost:3000/oauth2/callback/github",
+				RedirectURL:  "https://go-oauth-production.up.railway.app/oauth2/callback/github",
 				Scopes:       []string{"read:user", "user:email"},
 				Endpoint: oauth2.Endpoint{
 					AuthURL:  "https://github.com/login/oauth/authorize",
