@@ -4,7 +4,6 @@ package app
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"html/template"
 	"log/slog"
 	"net/http"
@@ -37,7 +36,7 @@ func (a *App) Root(w http.ResponseWriter, r *http.Request) {
 	// If not logged in, send to signin
 	// _, err := r.Cookie("access_token")
 	token, _, _ := GetAuthCookies(r)
-	if a.AccessToken == "" || a.UserInfo == nil || token == "" {
+	if  token == "" {
 		http.Redirect(w, r, "/signin", http.StatusSeeOther)
 		return
 	}
@@ -73,7 +72,7 @@ func (a *App) SetupRoutes() http.Handler {
 	// User routes
 	mux.HandleFunc("/users", a.HandleUsers)
 	mux.HandleFunc("/users/", a.HandleUserByID)
-	// mux.HandleFunc("/facebook-feed/", GetFacebookFeed)
+	// mux.HandleFunc("/facebook-feed/", a.GetFacebookFeed)
 	return mux
 }
 
